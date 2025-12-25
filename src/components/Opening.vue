@@ -76,12 +76,20 @@ const endPress = () => {
 <style scoped>
 .opening {
   width: 100vw;
-  height: 100vh;
-  background: #000000;
+  min-height: 100vh;
+  background: var(--linen-white);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  overflow-y: auto;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.opening::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .content {
@@ -133,7 +141,7 @@ const endPress = () => {
   font-weight: 100;
   text-align: center;
   line-height: 2.2;
-  color: var(--linen-white);
+  color: var(--grave-gray);
   opacity: 0.9;
 }
 
@@ -141,7 +149,7 @@ const endPress = () => {
   font-size: 0.75rem;
   font-weight: 200;
   text-align: center;
-  color: var(--linen-white);
+  color: var(--grave-gray);
   opacity: 0.5;
   margin-top: 2rem;
 }

@@ -3,8 +3,10 @@ import { ref, onMounted } from 'vue'
 
 const props = defineProps<{
   answers: {
+    nickname: string
     soundOfWorld: string
     geometry: string
+    coreAbsence: string
     surprise: number
     physicality: string
   }
@@ -17,6 +19,9 @@ const matchFound = ref(false)
 const showBreathingBtn = ref(false)
 const isBreathing = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
+
+// Partner nickname (simulated)
+const partnerNickname = ref('willow')
 
 onMounted(() => {
   // Simulate scanning for 3 seconds
@@ -50,10 +55,12 @@ const proceedToDashboard = () => {
 const getMatchDescription = () => {
   const sound = props.answers.soundOfWorld
   const physical = props.answers.physicality
+  const core = props.answers.coreAbsence
   
   return {
     sound: sound === 'static' ? 'static' : sound === 'ringing' ? 'ringing' : 'silence',
-    location: physical === 'chest' ? 'chest' : physical === 'neck' ? 'neck' : 'feet'
+    location: physical === 'chest' ? 'chest' : physical === 'neck' ? 'neck' : 'feet',
+    absence: core
   }
 }
 
@@ -84,9 +91,10 @@ const matchDesc = getMatchDescription()
         <div v-if="matchFound" class="match-found">
           <div class="match-info">
             <p class="match-title">match found</p>
-            <p class="match-id">user 771</p>
+            <p class="match-id">{{ partnerNickname }}</p>
+            <p class="match-subtitle">user 771</p>
             <p class="match-description">
-              their {{ matchDesc.sound }} sounds like yours.<br />
+              {{ partnerNickname }}'s {{ matchDesc.sound }} sounds like yours.<br />
               they also feel the weight in their {{ matchDesc.location }}.<br />
               they are waiting in the 'quiet room.'
             </p>
@@ -130,12 +138,20 @@ const matchDesc = getMatchDescription()
 <style scoped>
 .matching {
   width: 100vw;
-  height: 100vh;
-  background: var(--grave-gray);
+  min-height: 100vh;
+  background: var(--linen-white);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  overflow-y: auto;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.matching::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .matching-container {
@@ -155,6 +171,7 @@ const matchDesc = getMatchDescription()
   font-size: 1.2rem;
   font-weight: 100;
   opacity: 0.8;
+  color: var(--grave-gray);
   animation: pulse-text 2s ease-in-out infinite;
 }
 
@@ -205,6 +222,7 @@ const matchDesc = getMatchDescription()
   font-weight: 200;
   opacity: 0.7;
   letter-spacing: 0.3em;
+  color: var(--grave-gray);
 }
 
 .match-id {
@@ -214,12 +232,21 @@ const matchDesc = getMatchDescription()
   letter-spacing: 0.2em;
 }
 
+.match-subtitle {
+  font-size: 0.85rem;
+  font-weight: 200;
+  opacity: 0.5;
+  letter-spacing: 0.2em;
+  color: var(--grave-gray);
+}
+
 .match-description {
   font-size: 1rem;
   font-weight: 200;
   line-height: 2.2;
   opacity: 0.85;
   margin-top: 1rem;
+  color: var(--grave-gray);
 }
 
 .breathing-section {
@@ -234,12 +261,13 @@ const matchDesc = getMatchDescription()
   font-size: 0.95rem;
   font-weight: 200;
   opacity: 0.8;
+  color: var(--grave-gray);
 }
 
 .breathe-btn {
   background: none;
-  border: 2px solid var(--linen-white);
-  color: var(--linen-white);
+  border: 2px solid var(--grave-gray);
+  color: var(--grave-gray);
   font-family: inherit;
   font-size: 1rem;
   font-weight: 200;
@@ -259,7 +287,7 @@ const matchDesc = getMatchDescription()
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--linen-white);
+  background: var(--grave-gray);
   transition: all var(--transition-slow);
 }
 
@@ -276,7 +304,7 @@ const matchDesc = getMatchDescription()
 
 .breathe-btn:hover {
   opacity: 1;
-  box-shadow: 0 0 30px rgba(232, 226, 217, 0.2);
+  box-shadow: 0 0 30px rgba(26, 26, 27, 0.2);
 }
 
 @keyframes breathe-pulse {

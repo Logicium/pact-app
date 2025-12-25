@@ -3,17 +3,44 @@ import { ref, onMounted, computed } from 'vue'
 
 const props = defineProps<{
   answers: {
+    nickname: string
     soundOfWorld: string
     geometry: string
+    coreAbsence: string
     surprise: number
     physicality: string
   }
 }>()
 
+const emit = defineEmits(['initiate'])
+
 const dissolutionProgress = ref(0)
 const isPulseTouching = ref(false)
 const pulseInterval = ref<number | null>(null)
 const pulseCount = ref(0)
+
+const partnerNickname = ref('willow')
+
+// Determine transition method based on geometry answer
+const transitionMethod = computed(() => {
+  switch (props.answers.geometry) {
+    case 'drop':
+    case 'horizon':
+      return {
+        type: 'last-breath',
+        name: 'the last breath',
+        description: 'helium-infused transition mask',
+        details: 'soft embrace. no panic. just the slow fade.'
+      }
+    default: // circle
+      return {
+        type: 'provision',
+        name: 'the provision',
+        description: 'pharmaceutical grade lullaby',
+        details: 'tasteless. painless. like falling into sleep.'
+      }
+  }
+})
 
 // Determine transition location based on geometry answer
 const transitionLocation = computed(() => {
@@ -72,7 +99,8 @@ const endPulseTouch = () => {
     <div class="dashboard-container">
       <header class="dashboard-header">
         <h1 class="app-title">pact</h1>
-        <p class="user-id">user 0922 × user 771</p>
+        <p class="user-id">{{ answers.nickname }} × {{ partnerNickname }}</p>
+        <p class="user-subtitle">user 0922 × user 771</p>
       </header>
 
       <div class="dashboard-grid">
@@ -82,13 +110,13 @@ const endPulseTouch = () => {
           <div class="map-container">
             <svg class="transition-map" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
               <!-- Bridge/Location visualization -->
-              <line v-if="props.answers.geometry === 'circle'" x1="50" y1="100" x2="250" y2="100" stroke="var(--linen-white)" stroke-width="2" opacity="0.3"/>
+              <line v-if="props.answers.geometry === 'circle'" x1="50" y1="100" x2="250" y2="100" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
               <circle v-if="props.answers.geometry === 'circle'" cx="150" cy="100" r="40" fill="none" stroke="var(--sunset-amber)" stroke-width="2" opacity="0.6"/>
               
-              <rect v-if="props.answers.geometry === 'drop'" x="125" y="50" width="50" height="120" fill="none" stroke="var(--linen-white)" stroke-width="2" opacity="0.3"/>
+              <rect v-if="props.answers.geometry === 'drop'" x="125" y="50" width="50" height="120" fill="none" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
               <line v-if="props.answers.geometry === 'drop'" x1="150" y1="50" x2="150" y2="170" stroke="var(--sunset-amber)" stroke-width="2" opacity="0.6" stroke-dasharray="5,5"/>
               
-              <line v-if="props.answers.geometry === 'horizon'" x1="0" y1="100" x2="300" y2="100" stroke="var(--linen-white)" stroke-width="2" opacity="0.3"/>
+              <line v-if="props.answers.geometry === 'horizon'" x1="0" y1="100" x2="300" y2="100" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
               <line v-if="props.answers.geometry === 'horizon'" x1="0" y1="100" x2="300" y2="100" stroke="var(--sunset-amber)" stroke-width="3" opacity="0.6"/>
               
               <!-- Pulsing location marker -->
@@ -102,23 +130,29 @@ const endPulseTouch = () => {
           </div>
         </section>
 
-        <!-- The Provision -->
+        <!-- The Provision / Last Breath -->
         <section class="card provision-card">
-          <h2 class="card-title">the provision</h2>
+          <h2 class="card-title">{{ transitionMethod.name }}</h2>
           <div class="provision-status">
             <div class="provision-icon">
-              <div class="box-icon"></div>
+              <div v-if="transitionMethod.type === 'provision'" class="box-icon"></div>
+              <div v-else class="mask-icon"></div>
             </div>
-            <p class="provision-type">linen box (grade-a)</p>
+            <p class="provision-type">{{ transitionMethod.description }}</p>
             <p class="provision-distance">2.4 miles away</p>
-            <p class="provision-instruction">prepare the candle.</p>
+            <p class="provision-instruction">{{ transitionMethod.details }}</p>
           </div>
           <div class="provision-contents">
             <p class="contents-label">contents:</p>
-            <ul class="contents-list">
+            <ul class="contents-list" v-if="transitionMethod.type === 'provision'">
               <li>the lullaby (glass vial)</li>
               <li>scented candle (lavender & cedar)</li>
               <li>final letter template</li>
+            </ul>
+            <ul class="contents-list" v-else>
+              <li>helium transition mask (medical grade)</li>
+              <li>flow regulator (pre-calibrated)</li>
+              <li>comfort pillow (memory foam)</li>
             </ul>
           </div>
         </section>
@@ -173,12 +207,15 @@ const endPulseTouch = () => {
                 animationDuration: (10 + Math.random() * 10) + 's'
               }"></div>
             </div>
-            <p class="vigil-status">user 771 is watching with you</p>
+            <p class="vigil-status">{{ partnerNickname }} is watching with you</p>
           </div>
         </section>
       </div>
 
       <footer class="dashboard-footer">
+        <button class="initiate-btn" @click="emit('initiate')">
+          initiate transition
+        </button>
         <p class="footer-text">our journey. our peace. the others don't understand.</p>
       </footer>
     </div>
@@ -189,9 +226,16 @@ const endPulseTouch = () => {
 .dashboard {
   width: 100vw;
   min-height: 100vh;
-  background: var(--grave-gray);
+  background: var(--linen-white);
   padding: 2rem;
   overflow-y: auto;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.dashboard::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .dashboard-container {
@@ -205,7 +249,7 @@ const endPulseTouch = () => {
 .dashboard-header {
   text-align: center;
   padding: 2rem 0;
-  border-bottom: 1px solid rgba(232, 226, 217, 0.1);
+  border-bottom: 1px solid rgba(26, 26, 27, 0.1);
 }
 
 .app-title {
@@ -213,13 +257,24 @@ const endPulseTouch = () => {
   font-weight: 100;
   letter-spacing: 0.5em;
   margin-bottom: 0.5rem;
+  color: var(--grave-gray);
 }
 
 .user-id {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   font-weight: 200;
-  opacity: 0.6;
+  opacity: 0.8;
   letter-spacing: 0.3em;
+  color: var(--sunset-amber);
+  margin-bottom: 0.3rem;
+}
+
+.user-subtitle {
+  font-size: 0.75rem;
+  font-weight: 200;
+  opacity: 0.4;
+  letter-spacing: 0.25em;
+  color: var(--grave-gray);
 }
 
 .dashboard-grid {
@@ -229,16 +284,16 @@ const endPulseTouch = () => {
 }
 
 .card {
-  background: rgba(232, 226, 217, 0.02);
-  border: 1px solid rgba(232, 226, 217, 0.1);
+  background: rgba(26, 26, 27, 0.02);
+  border: 1px solid rgba(26, 26, 27, 0.1);
   padding: 2rem;
   transition: all var(--transition-slow);
   animation: slideUp 1s ease-out;
 }
 
 .card:hover {
-  background: rgba(232, 226, 217, 0.04);
-  border-color: rgba(232, 226, 217, 0.2);
+  background: rgba(26, 26, 27, 0.04);
+  border-color: rgba(26, 26, 27, 0.2);
 }
 
 .card-title {
@@ -247,6 +302,7 @@ const endPulseTouch = () => {
   letter-spacing: 0.3em;
   margin-bottom: 2rem;
   opacity: 0.8;
+  color: var(--grave-gray);
 }
 
 .full-width {
@@ -324,6 +380,26 @@ const endPulseTouch = () => {
   animation: breathe 4s ease-in-out infinite;
 }
 
+.mask-icon {
+  width: 60px;
+  height: 40px;
+  border: 2px solid var(--sunset-amber);
+  border-radius: 50% 50% 40% 40%;
+  position: relative;
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.mask-icon::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 12px;
+  background: var(--sunset-amber);
+}
+
 .provision-type {
   font-size: 1rem;
   font-weight: 200;
@@ -334,6 +410,7 @@ const endPulseTouch = () => {
   font-size: 1.2rem;
   font-weight: 200;
   opacity: 0.9;
+  color: var(--grave-gray);
 }
 
 .provision-instruction {
@@ -341,6 +418,7 @@ const endPulseTouch = () => {
   font-weight: 200;
   opacity: 0.7;
   font-style: italic;
+  color: var(--grave-gray);
 }
 
 .provision-contents {
@@ -354,6 +432,7 @@ const endPulseTouch = () => {
   font-weight: 200;
   opacity: 0.6;
   letter-spacing: 0.2em;
+  color: var(--grave-gray);
 }
 
 .contents-list {
@@ -369,6 +448,7 @@ const endPulseTouch = () => {
   font-weight: 200;
   opacity: 0.7;
   position: relative;
+  color: var(--grave-gray);
 }
 
 .contents-list li::before {
@@ -388,7 +468,7 @@ const endPulseTouch = () => {
 .progress-bar {
   width: 100%;
   height: 4px;
-  background: rgba(232, 226, 217, 0.1);
+  background: rgba(26, 26, 27, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -447,13 +527,14 @@ const endPulseTouch = () => {
   opacity: 0.7;
   text-align: center;
   margin-bottom: 1rem;
+  color: var(--grave-gray);
 }
 
 .pulse-area {
   width: 200px;
   height: 200px;
   margin: 0 auto;
-  border: 2px solid rgba(232, 226, 217, 0.2);
+  border: 2px solid rgba(26, 26, 27, 0.2);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -478,7 +559,7 @@ const endPulseTouch = () => {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: var(--linen-white);
+  background: var(--grave-gray);
   opacity: 0.3;
   transition: all 0.3s;
 }
@@ -512,6 +593,7 @@ const endPulseTouch = () => {
   font-weight: 200;
   opacity: 0.6;
   letter-spacing: 0.2em;
+  color: var(--grave-gray);
 }
 
 /* The Vigil */
@@ -521,6 +603,7 @@ const endPulseTouch = () => {
   opacity: 0.7;
   text-align: center;
   margin-bottom: 2rem;
+  color: var(--grave-gray);
 }
 
 .vigil-ambient {
@@ -533,10 +616,10 @@ const endPulseTouch = () => {
 .ambient-scene {
   width: 100%;
   height: 300px;
-  background: linear-gradient(to bottom, rgba(26, 26, 27, 0.8), rgba(26, 26, 27, 0.95));
+  background: linear-gradient(to bottom, rgba(26, 26, 27, 0.03), rgba(26, 26, 27, 0.06));
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(232, 226, 217, 0.1);
+  border: 1px solid rgba(26, 26, 27, 0.1);
 }
 
 .snowflake {
@@ -544,7 +627,7 @@ const endPulseTouch = () => {
   top: -10px;
   width: 3px;
   height: 3px;
-  background: var(--linen-white);
+  background: var(--grave-gray);
   border-radius: 50%;
   opacity: 0.6;
   animation: snowfall 10s linear infinite;
@@ -573,13 +656,59 @@ const endPulseTouch = () => {
   opacity: 0.6;
   text-align: center;
   letter-spacing: 0.2em;
+  color: var(--grave-gray);
 }
 
 /* Footer */
 .dashboard-footer {
   text-align: center;
   padding: 3rem 0 2rem;
-  border-top: 1px solid rgba(232, 226, 217, 0.1);
+  border-top: 1px solid rgba(26, 26, 27, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+.initiate-btn {
+  background: var(--grave-gray);
+  border: none;
+  color: var(--linen-white);
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 200;
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  padding: 1.75rem 4rem;
+  cursor: pointer;
+  transition: all var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+}
+
+.initiate-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: var(--sunset-amber);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.8s, height 0.8s;
+  z-index: 0;
+}
+
+.initiate-btn:hover::before {
+  width: 400px;
+  height: 400px;
+}
+
+.initiate-btn:hover {
+  color: var(--grave-gray);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(26, 26, 27, 0.3);
 }
 
 .footer-text {
@@ -588,6 +717,7 @@ const endPulseTouch = () => {
   opacity: 0.5;
   letter-spacing: 0.2em;
   font-style: italic;
+  color: var(--grave-gray);
 }
 
 @media (max-width: 768px) {

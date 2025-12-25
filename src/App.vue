@@ -1,19 +1,27 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import HomePage from './components/HomePage.vue'
 import Opening from './components/Opening.vue'
 import Quiz from './components/Quiz.vue'
 import Matching from './components/Matching.vue'
 import Dashboard from './components/Dashboard.vue'
+import TerminalHandshake from './components/TerminalHandshake.vue'
 
-type AppState = 'opening' | 'quiz' | 'matching' | 'dashboard'
+type AppState = 'home' | 'opening' | 'quiz' | 'matching' | 'dashboard' | 'terminal'
 
-const currentState = ref<AppState>('opening')
+const currentState = ref<AppState>('home')
 const quizAnswers = ref({
+  nickname: '',
   soundOfWorld: '',
   geometry: '',
+  coreAbsence: '',
   surprise: 50,
   physicality: ''
 })
+
+const startExperience = () => {
+  currentState.value = 'opening'
+}
 
 const advanceToQuiz = () => {
   currentState.value = 'quiz'
@@ -27,14 +35,20 @@ const completeQuiz = (answers: typeof quizAnswers.value) => {
 const advanceToDashboard = () => {
   currentState.value = 'dashboard'
 }
+
+const initiateTerminal = () => {
+  currentState.value = 'terminal'
+}
 </script>
 
 <template>
   <div class="app-container">
-    <Opening v-if="currentState === 'opening'" @begin="advanceToQuiz" />
+    <HomePage v-if="currentState === 'home'" @start="startExperience" />
+    <Opening v-else-if="currentState === 'opening'" @begin="advanceToQuiz" />
     <Quiz v-else-if="currentState === 'quiz'" @complete="completeQuiz" />
     <Matching v-else-if="currentState === 'matching'" @matched="advanceToDashboard" :answers="quizAnswers" />
-    <Dashboard v-else-if="currentState === 'dashboard'" :answers="quizAnswers" />
+    <Dashboard v-else-if="currentState === 'dashboard'" @initiate="initiateTerminal" :answers="quizAnswers" />
+    <TerminalHandshake v-else-if="currentState === 'terminal'" />
   </div>
 </template>
 
@@ -58,18 +72,34 @@ const advanceToDashboard = () => {
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 200;
-  background: var(--grave-gray);
-  color: var(--linen-white);
+  background: var(--linen-white);
+  color: var(--grave-gray);
   letter-spacing: 0.15em;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   text-transform: lowercase;
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .app-container {
   width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
   animation: breathe 8s ease-in-out infinite;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.app-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 @keyframes breathe {
