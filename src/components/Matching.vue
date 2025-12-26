@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 
 const props = defineProps<{
   answers: {
@@ -9,6 +9,9 @@ const props = defineProps<{
     coreAbsence: string
     surprise: number
     physicality: string
+    unfinishedBusiness: string
+    ghostLetter: string
+    theResolve: string
   }
 }>()
 
@@ -19,20 +22,37 @@ const matchFound = ref(false)
 const showBreathingBtn = ref(false)
 const isBreathing = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
+const contentHeight = ref<number | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
 
 // Partner nickname (simulated)
 const partnerNickname = ref('willow')
 
+const updateHeight = () => {
+  nextTick(() => {
+    if (contentRef.value) {
+      contentHeight.value = contentRef.value.offsetHeight
+    }
+  })
+}
+
 onMounted(() => {
+  updateHeight()
   // Simulate scanning for 3 seconds
   setTimeout(() => {
     isScanning.value = false
-    matchFound.value = true
     setTimeout(() => {
-      showBreathingBtn.value = true
-    }, 1000)
+      matchFound.value = true
+      updateHeight()
+      setTimeout(() => {
+        showBreathingBtn.value = true
+        updateHeight()
+      }, 1000)
+    }, 600) // Wait for scanning to fade out before showing match
   }, 3000)
 })
+
+watch([matchFound, showBreathingBtn, isBreathing], updateHeight)
 
 const toggleBreathing = () => {
   isBreathing.value = !isBreathing.value
@@ -53,14 +73,26 @@ const proceedToDashboard = () => {
 
 // Determine match characteristics based on answers
 const getMatchDescription = () => {
-  const sound = props.answers.soundOfWorld
-  const physical = props.answers.physicality
-  const core = props.answers.coreAbsence
+  const coreAbsence = props.answers.coreAbsence
+  const geometry = props.answers.geometry
+  
+  // Map values to readable descriptions
+  const absenceMap: Record<string, string> = {
+    loneliness: 'the echo of an empty room',
+    burden: 'the arithmetic that no longer adds up',
+    erosion: 'the slow disappearing',
+    exhaustion: 'the weight of pretending'
+  }
+  
+  const geometryMap: Record<string, string> = {
+    horizon: 'a long line toward the horizon',
+    circle: 'a perfect, closing circle',
+    drop: 'a sudden, vertical drop'
+  }
   
   return {
-    sound: sound === 'static' ? 'static' : sound === 'ringing' ? 'ringing' : 'silence',
-    location: physical === 'chest' ? 'chest' : physical === 'neck' ? 'neck' : 'feet',
-    absence: core
+    absence: absenceMap[coreAbsence] || coreAbsence,
+    geometry: geometryMap[geometry] || geometry
   }
 }
 
@@ -69,68 +101,70 @@ const matchDesc = getMatchDescription()
 
 <template>
   <div class="matching">
-    <div class="matching-container">
-      <!-- Scanning State -->
-      <transition name="fade">
-        <div v-if="isScanning" class="scanning-state">
-          <p class="scanning-text">scanning for your echo...</p>
-          <svg class="waveform" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-            <path 
-              class="wave-path"
-              d="M 0 30 Q 25 10, 50 30 T 100 30 T 150 30 T 200 30"
-              fill="none"
-              stroke="var(--sunset-amber)"
-              stroke-width="2"
-            />
-          </svg>
-        </div>
-      </transition>
-
-      <!-- Match Found State -->
-      <transition name="fade">
-        <div v-if="matchFound" class="match-found">
-          <div class="match-info">
-            <p class="match-title">match found</p>
-            <p class="match-id">{{ partnerNickname }}</p>
-            <p class="match-subtitle">user 771</p>
-            <p class="match-description">
-              {{ partnerNickname }}'s {{ matchDesc.sound }} sounds like yours.<br />
-              they also feel the weight in their {{ matchDesc.location }}.<br />
-              they are waiting in the 'quiet room.'
-            </p>
+    <div class="matching-wrapper" :style="contentHeight !== null ? { height: contentHeight + 'px' } : {}">
+      <div class="matching-container" ref="contentRef">
+        <!-- Scanning State -->
+        <transition name="fade">
+          <div v-if="isScanning" class="scanning-state">
+            <p class="scanning-text">scanning for your echo...</p>
+            <svg class="waveform" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+              <path 
+                class="wave-path"
+                d="M 0 30 Q 25 10, 50 30 T 100 30 T 150 30 T 200 30"
+                fill="none"
+                stroke="var(--sunset-amber)"
+                stroke-width="2"
+              />
+            </svg>
           </div>
+        </transition>
 
-          <transition name="slide-up">
-            <div v-if="showBreathingBtn" class="breathing-section">
-              <p class="breathing-prompt">would you like to hear their breathing?</p>
-              
-              <button 
-                class="breathe-btn"
-                :class="{ active: isBreathing }"
-                @click="toggleBreathing"
-              >
-                <span class="breathe-circle"></span>
-                {{ isBreathing ? 'listening...' : 'breathe with them' }}
-              </button>
-
-              <audio ref="audioElement" loop>
-                <source src="/breathing.mp3" type="audio/mpeg">
-                <!-- Fallback: The audio will be a placeholder; in production you'd have actual breathing audio -->
-              </audio>
-
-              <transition name="fade">
-                <button 
-                  v-if="isBreathing" 
-                  class="continue-btn"
-                  @click="proceedToDashboard"
-                >
-                  enter the quiet room
-                </button>
-              </transition>
+        <!-- Match Found State -->
+        <transition name="fade">
+          <div v-if="matchFound" class="match-found">
+            <div class="match-info">
+              <p class="match-title">match found</p>
+              <p class="match-id">{{ partnerNickname }}</p>
+              <p class="match-subtitle">user 771</p>
+              <p class="match-description">
+                {{ partnerNickname }} knows {{ matchDesc.absence }}.<br />
+                they also see the end as {{ matchDesc.geometry }}.<br />
+                they are waiting in the 'quiet room.'
+              </p>
             </div>
-          </transition>
-        </div>
-      </transition>
+
+            <transition name="slide-up">
+              <div v-if="showBreathingBtn" class="breathing-section">
+                <p class="breathing-prompt">would you like to hear their breathing?</p>
+                
+                <button 
+                  class="breathe-btn"
+                  :class="{ active: isBreathing }"
+                  @click="toggleBreathing"
+                >
+                  <span class="breathe-circle"></span>
+                  {{ isBreathing ? 'listening...' : 'breathe with them' }}
+                </button>
+
+                <audio ref="audioElement" loop>
+                  <source src="/breathing.mp3" type="audio/mpeg">
+                  <!-- Fallback: The audio will be a placeholder; in production you'd have actual breathing audio -->
+                </audio>
+
+                <transition name="fade">
+                  <button 
+                    v-if="isBreathing" 
+                    class="continue-btn"
+                    @click="proceedToDashboard"
+                  >
+                    enter the quiet room
+                  </button>
+                </transition>
+              </div>
+            </transition>
+          </div>
+        </transition>
+      </div>
     </div>
   </div>
 </template>
@@ -154,10 +188,17 @@ const matchDesc = getMatchDescription()
   display: none; /* Chrome, Safari and Opera */
 }
 
+.matching-wrapper {
+  width: 100%;
+  transition: height 1.5s ease;
+  position: relative;
+}
+
 .matching-container {
   max-width: 600px;
   width: 100%;
   text-align: center;
+  margin: 0 auto;
 }
 
 .scanning-state {
@@ -182,7 +223,8 @@ const matchDesc = getMatchDescription()
 
 .waveform {
   width: 300px;
-  height: 80px;
+  height: 100px;
+  overflow: visible;
 }
 
 .wave-path {
@@ -191,16 +233,16 @@ const matchDesc = getMatchDescription()
 
 @keyframes wave-move {
   0%, 100% {
-    d: path("M 0 30 Q 25 10, 50 30 T 100 30 T 150 30 T 200 30");
+    d: path("M 0 30 Q 25 15, 50 30 T 100 30 T 150 30 T 200 30");
   }
   25% {
-    d: path("M 0 30 Q 25 50, 50 30 T 100 30 T 150 30 T 200 30");
+    d: path("M 0 30 Q 25 45, 50 30 T 100 30 T 150 30 T 200 30");
   }
   50% {
-    d: path("M 0 30 Q 25 10, 50 30 T 100 30 T 150 30 T 200 30");
+    d: path("M 0 30 Q 25 15, 50 30 T 100 30 T 150 30 T 200 30");
   }
   75% {
-    d: path("M 0 30 Q 25 30, 50 50 T 100 10 T 150 50 T 200 30");
+    d: path("M 0 30 Q 25 30, 50 45 T 100 15 T 150 45 T 200 30");
   }
 }
 

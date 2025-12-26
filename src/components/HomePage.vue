@@ -23,7 +23,7 @@ const emit = defineEmits(['start'])
           <ol class="process-list">
             <li>
               <span class="step-number">01</span>
-              <span class="step-text">we understand your texture of heavy</span>
+              <span class="step-text">we understand why you despair, the shape of your sorrow</span>
             </li>
             <li>
               <span class="step-number">02</span>
@@ -123,6 +123,34 @@ const emit = defineEmits(['start'])
   display: flex;
   flex-direction: column;
   gap: 3.5rem;
+}
+
+.intro-block {
+  text-align: center;
+  animation: fadeInSlideUp 1s ease-out 0.3s backwards;
+}
+
+.process-block {
+  animation: fadeInSlideUp 1s ease-out 0.6s backwards;
+}
+
+.for-block {
+  animation: fadeInSlideUp 1s ease-out 0.9s backwards;
+}
+
+.cta-block {
+  animation: fadeInSlideUp 1s ease-out 1.2s backwards;
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .intro-block {
@@ -251,6 +279,7 @@ const emit = defineEmits(['start'])
   transform: translate(-50%, -50%);
   transition: width 0.6s, height 0.6s;
   z-index: 0;
+  opacity: 0.3;
 }
 
 .cta-button:hover::before {
@@ -259,12 +288,11 @@ const emit = defineEmits(['start'])
 }
 
 .cta-button:hover {
-  color: var(--grave-gray);
   transform: translateY(-2px);
   box-shadow: 0 10px 30px rgba(26, 26, 27, 0.2);
 }
 
-.cta-button span {
+.cta-button > * {
   position: relative;
   z-index: 1;
 }

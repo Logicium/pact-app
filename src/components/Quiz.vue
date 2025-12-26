@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 
 const emit = defineEmits<{
   complete: [answers: {
@@ -14,6 +14,8 @@ const emit = defineEmits<{
 
 const currentQuestion = ref(0)
 const showQuestion = ref(false)
+const contentHeight = ref(0)
+const contentRef = ref<HTMLElement | null>(null)
 
 const answers = ref({
   nickname: '',
@@ -21,7 +23,10 @@ const answers = ref({
   geometry: '',
   coreAbsence: '',
   surprise: 50,
-  physicality: ''
+  physicality: '',
+  unfinishedBusiness: '',
+  ghostLetter: '',
+  theResolve: ''
 })
 
 const questions = [
@@ -37,13 +42,14 @@ const questions = [
     placeholder: 'a name, a memory, anything soft'
   },
   {
-    id: 'soundOfWorld',
+    id: 'coreAbsence',
     type: 'choice',
-    text: 'the sound of the world',
+    text: 'the core of the absence',
     options: [
-      { value: 'static', label: 'an unending static' },
-      { value: 'ringing', label: 'a high-pitched ringing in an empty room' },
-      { value: 'muffled', label: 'a heavy, underwater muffled thud' }
+      { value: 'loneliness', label: 'the echo of an empty room that used to hold someone' },
+      { value: 'burden', label: 'the arithmetic of survival that no longer adds up' },
+      { value: 'erosion', label: 'the slow disappearing of the person you once were' },
+      { value: 'exhaustion', label: 'the weight of pretending the sun still feels warm' }
     ]
   },
   {
@@ -57,17 +63,6 @@ const questions = [
     ]
   },
   {
-    id: 'coreAbsence',
-    type: 'choice',
-    text: 'the core of the absence',
-    options: [
-      { value: 'loneliness', label: 'the echo of an empty room that used to hold someone' },
-      { value: 'burden', label: 'the arithmetic of survival that no longer adds up' },
-      { value: 'erosion', label: 'the slow disappearing of the person you once were' },
-      { value: 'exhaustion', label: 'the weight of pretending the sun still feels warm' }
-    ]
-  },
-  {
     id: 'surprise',
     type: 'slider',
     text: 'when you are gone, who will be \'surprised\'?',
@@ -75,30 +70,67 @@ const questions = [
     max: 'everyone'
   },
   {
-    id: 'physicality',
+    id: 'unfinishedBusiness',
     type: 'choice',
-    text: 'where do you feel the \'heavy\' most?',
+    text: 'are there words still caught in your throat?<br />letters you never sent? whispers for those who will remain?',
     options: [
-      { value: 'chest', label: 'the center of the chest' },
-      { value: 'neck', label: 'the back of the neck' },
-      { value: 'feet', label: 'the soles of the feet' }
+      { value: 'finished', label: 'i have said my goodbyes. i have already drifted away.' },
+      { value: 'unsaid', label: 'there are anchors of words still holding me to the shore.' }
+    ]
+  },
+  {
+    id: 'theResolve',
+    type: 'choice',
+    text: 'is the decision a calm, still lake?<br />or is it still a storm?',
+    options: [
+      { value: 'peace', label: 'i am at peace with the quiet.' },
+      { value: 'hesitation', label: 'i am still looking back at the light.' }
     ]
   }
 ]
 
+const filteredQuestions = computed(() => {
+  const baseQuestions = [...questions]
+  
+  // If user chose 'unsaid', insert the Ghost Letter after unfinishedBusiness
+  if (answers.value.unfinishedBusiness === 'unsaid') {
+    const businessIndex = baseQuestions.findIndex(q => q.id === 'unfinishedBusiness')
+    baseQuestions.splice(businessIndex + 1, 0, {
+      id: 'ghostLetter',
+      type: 'textarea',
+      text: 'type what you cannot say. we will keep it safe in the linen box.<br />when your pulse-touch ceases, we will release it to them.<br />it will be as if you never left a stone unturned.',
+      placeholder: 'dear...'
+    })
+  }
+  
+  return baseQuestions
+})
+
 const canProceed = computed(() => {
-  const q = questions[currentQuestion.value]
+  const q = filteredQuestions.value[currentQuestion.value]
   if (q.type === 'intro') return true
   if (q.type === 'slider') return true
   if (q.type === 'input') return answers.value.nickname.trim().length > 0
+  if (q.type === 'textarea') return answers.value.ghostLetter.trim().length > 0
   return answers.value[q.id as keyof typeof answers.value] !== ''
 })
 
 onMounted(() => {
   setTimeout(() => {
     showQuestion.value = true
+    nextTick(updateHeight)
   }, 500)
 })
+
+watch(showQuestion, () => {
+  nextTick(updateHeight)
+})
+
+const updateHeight = () => {
+  if (contentRef.value) {
+    contentHeight.value = contentRef.value.offsetHeight
+  }
+}
 
 const selectAnswer = (questionId: string, value: string) => {
   (answers.value as any)[questionId] = value
@@ -106,12 +138,12 @@ const selectAnswer = (questionId: string, value: string) => {
 }
 
 const nextQuestion = () => {
-  if (currentQuestion.value < questions.length - 1) {
+  if (currentQuestion.value < filteredQuestions.value.length - 1) {
     showQuestion.value = false
     setTimeout(() => {
       currentQuestion.value++
       showQuestion.value = true
-    }, 800)
+    }, 600)
   } else {
     completeQuiz()
   }
@@ -125,39 +157,40 @@ const completeQuiz = () => {
 <template>
   <div class="quiz">
     <div class="quiz-container">
-      <transition name="slide" mode="out-in">
-        <div v-if="showQuestion" :key="currentQuestion" class="question-card">
-          <!-- Intro Screen -->
-          <div v-if="questions[currentQuestion].type === 'intro'" class="intro-screen">
-            <p class="intro-text" v-html="questions[currentQuestion].text"></p>
-            <button class="continue-btn" @click="nextQuestion">
-              continue
-            </button>
-          </div>
-
-          <!-- Choice Questions -->
-          <div v-else-if="questions[currentQuestion].type === 'choice'" class="choice-screen">
-            <h2 class="question-title">{{ questions[currentQuestion].text }}</h2>
-            <div class="options">
-              <button
-                v-for="option in questions[currentQuestion].options"
-                :key="option.value"
-                class="option-btn"
-                :class="{ selected: answers[questions[currentQuestion].id as keyof typeof answers] === option.value }"
-                @click="selectAnswer(questions[currentQuestion].id, option.value)"
-              >
-                {{ option.label }}
+      <div class="question-wrapper" :style="{ height: contentHeight + 'px' }">
+        <transition name="fade" mode="out-in">
+          <div v-if="showQuestion" :key="currentQuestion" class="question-card" ref="contentRef">
+            <!-- Intro Screen -->
+            <div v-if="filteredQuestions[currentQuestion].type === 'intro'" class="intro-screen">
+              <p class="intro-text" v-html="filteredQuestions[currentQuestion].text"></p>
+              <button class="continue-btn" @click="nextQuestion">
+                continue
               </button>
             </div>
-          </div>
 
-          <!-- Input Question -->
-          <div v-else-if="questions[currentQuestion].type === 'input'" class="input-screen">
-            <h2 class="question-title">{{ questions[currentQuestion].text }}</h2>
+            <!-- Choice Questions -->
+            <div v-else-if="filteredQuestions[currentQuestion].type === 'choice'" class="choice-screen">
+              <h2 class="question-title" v-html="filteredQuestions[currentQuestion].text"></h2>
+              <div class="options">
+                <button
+                  v-for="option in filteredQuestions[currentQuestion].options"
+                  :key="option.value"
+                  class="option-btn"
+                  :class="{ selected: answers[filteredQuestions[currentQuestion].id as keyof typeof answers] === option.value }"
+                  @click="selectAnswer(filteredQuestions[currentQuestion].id, option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Input Question -->
+            <div v-else-if="filteredQuestions[currentQuestion].type === 'input'" class="input-screen">
+            <h2 class="question-title">{{ filteredQuestions[currentQuestion].text }}</h2>
             <input 
               type="text"
               v-model="answers.nickname"
-              :placeholder="questions[currentQuestion].placeholder"
+              :placeholder="filteredQuestions[currentQuestion].placeholder"
               class="nickname-input"
               @keyup.enter="canProceed && nextQuestion()"
               autofocus
@@ -172,11 +205,30 @@ const completeQuiz = () => {
             </button>
           </div>
 
+          <!-- Textarea Question (Ghost Letter) -->
+          <div v-else-if="filteredQuestions[currentQuestion].type === 'textarea'" class="textarea-screen">
+            <h2 class="question-title ghost-letter-title" v-html="filteredQuestions[currentQuestion].text"></h2>
+            <textarea
+              v-model="answers.ghostLetter"
+              :placeholder="filteredQuestions[currentQuestion].placeholder"
+              class="ghost-letter-textarea"
+              rows="8"
+            ></textarea>
+            <button 
+              class="continue-btn" 
+              :class="{ disabled: !canProceed }"
+              :disabled="!canProceed"
+              @click="nextQuestion"
+            >
+              seal the letter
+            </button>
+          </div>
+
           <!-- Slider Question -->
-          <div v-else-if="questions[currentQuestion].type === 'slider'" class="slider-screen">
-            <h2 class="question-title">{{ questions[currentQuestion].text }}</h2>
+          <div v-else-if="filteredQuestions[currentQuestion].type === 'slider'" class="slider-screen">
+            <h2 class="question-title">{{ filteredQuestions[currentQuestion].text }}</h2>
             <div class="slider-container">
-              <span class="slider-label">{{ questions[currentQuestion].min }}</span>
+              <span class="slider-label">{{ filteredQuestions[currentQuestion].min }}</span>
               <input
                 type="range"
                 min="0"
@@ -184,7 +236,7 @@ const completeQuiz = () => {
                 v-model="answers.surprise"
                 class="slider"
               />
-              <span class="slider-label">{{ questions[currentQuestion].max }}</span>
+              <span class="slider-label">{{ filteredQuestions[currentQuestion].max }}</span>
             </div>
             <button class="continue-btn" @click="nextQuestion">
               continue
@@ -192,10 +244,11 @@ const completeQuiz = () => {
           </div>
         </div>
       </transition>
+      </div>
 
       <div class="progress-indicator">
         <div 
-          v-for="(q, idx) in questions.filter(q => q.type !== 'intro')" 
+          v-for="(q, idx) in filteredQuestions.filter(q => q.type !== 'intro')" 
           :key="idx" 
           class="progress-dot"
           :class="{ active: currentQuestion > idx, current: currentQuestion === idx + 1 }"
@@ -229,11 +282,18 @@ const completeQuiz = () => {
   width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 3rem;
 }
 
+.question-wrapper {
+  width: 100%;
+  transition: height 1.2s ease;
+  position: relative;
+}
+
 .question-card {
-  animation: slideUp 800ms ease-out;
+  width: 100%;
 }
 
 .intro-screen,
@@ -242,6 +302,7 @@ const completeQuiz = () => {
 .slider-screen {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 3rem;
   align-items: center;
 }
@@ -344,6 +405,50 @@ const completeQuiz = () => {
   border-bottom-color: var(--sunset-amber);
 }
 
+/* Textarea Screen (Ghost Letter) */
+.textarea-screen {
+  gap: 2rem;
+}
+
+.ghost-letter-title {
+  font-size: 1.1rem;
+  line-height: 2;
+  font-weight: 100;
+  opacity: 0.85;
+}
+
+.ghost-letter-textarea {
+  width: 100%;
+  max-width: 500px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(26, 26, 27, 0.15);
+  color: var(--grave-gray);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 200;
+  letter-spacing: 0.08em;
+  line-height: 2.2;
+  padding: 1.5rem 0.5rem;
+  text-align: left;
+  transition: all var(--transition-slow);
+  outline: none;
+  resize: none;
+  opacity: 0.9;
+}
+
+.ghost-letter-textarea::placeholder {
+  color: var(--grave-gray);
+  opacity: 0.25;
+  font-style: italic;
+}
+
+.ghost-letter-textarea:focus {
+  border-bottom-color: var(--sunset-amber);
+  opacity: 0.7;
+}
+
+/* Slider Screen */
 .slider-screen {
   gap: 2rem;
 }
@@ -436,7 +541,7 @@ const completeQuiz = () => {
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin-top: 2rem;
+  transition: transform 0.8s ease;
 }
 
 .progress-dot {
@@ -456,18 +561,43 @@ const completeQuiz = () => {
   box-shadow: 0 0 10px rgba(255, 157, 0, 0.5);
 }
 
-.slide-enter-active,
+.slide-enter-active {
+  transition: opacity 0.8s ease;
+}
+
 .slide-leave-active {
-  transition: all var(--transition-slow);
+  transition: opacity 0.8s ease;
+  position: absolute;
+  width: 100%;
 }
 
 .slide-enter-from {
   opacity: 0;
-  transform: translateY(30px);
+}
+
+.slide-enter-to {
+  opacity: 1;
+}
+
+.slide-leave-from {
+  opacity: 1;
 }
 
 .slide-leave-to {
   opacity: 0;
-  transform: translateY(-30px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.6s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  transition-delay: 0.2s;
 }
 </style>

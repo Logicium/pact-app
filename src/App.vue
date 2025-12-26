@@ -16,7 +16,10 @@ const quizAnswers = ref({
   geometry: '',
   coreAbsence: '',
   surprise: 50,
-  physicality: ''
+  physicality: '',
+  unfinishedBusiness: '',
+  ghostLetter: '',
+  theResolve: ''
 })
 
 const startExperience = () => {
@@ -61,6 +64,11 @@ const initiateTerminal = () => {
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 :root {
   --grave-gray: #1a1a1b;
   --linen-white: #e8e2d9;
@@ -75,21 +83,12 @@ body {
   background: var(--linen-white);
   color: var(--grave-gray);
   letter-spacing: 0.15em;
-  overflow-x: hidden;
-  overflow-y: auto;
   text-transform: lowercase;
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-body::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
 }
 
 .app-container {
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
   animation: breathe 8s ease-in-out infinite;

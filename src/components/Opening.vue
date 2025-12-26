@@ -1,20 +1,41 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 
 const emit = defineEmits(['begin'])
 
 const showText = ref(false)
 const isPressed = ref(false)
 const pressProgress = ref(0)
+const contentHeight = ref<number | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
+const textRef = ref<HTMLElement | null>(null)
+const textHeight = ref(0)
 let pressTimer: number | null = null
 let progressInterval: number | null = null
 
 const PRESS_DURATION = 2000 // 2 seconds hold
 
+const updateHeight = () => {
+  if (contentRef.value) {
+    contentHeight.value = contentRef.value.offsetHeight
+  }
+  if (textRef.value) {
+    textHeight.value = textRef.value.offsetHeight
+  }
+}
+
 onMounted(() => {
+  nextTick(() => {
+    updateHeight()
+  })
+  
   setTimeout(() => {
     showText.value = true
   }, 2000)
+})
+
+watch(showText, () => {
+  nextTick(updateHeight)
 })
 
 const startPress = () => {
@@ -44,31 +65,38 @@ const endPress = () => {
 
 <template>
   <div class="opening">
-    <div class="content">
-      <div 
-        class="amber-dot"
-        :class="{ pressed: isPressed }"
-        @mousedown="startPress"
-        @mouseup="endPress"
-        @mouseleave="endPress"
-        @touchstart.prevent="startPress"
-        @touchend.prevent="endPress"
-      >
-        <div class="progress-ring" :style="{ '--progress': pressProgress }"></div>
+    <div class="content-wrapper" :style="contentHeight !== null ? { height: contentHeight + 'px' } : {}">
+      <div class="content" ref="contentRef">
+        <div 
+          class="dot-container" 
+          :style="showText && textHeight > 0 ? { transform: `translateY(-${textHeight / 2}px)` } : {}"
+        >
+          <div 
+            class="amber-dot"
+            :class="{ pressed: isPressed }"
+            @mousedown="startPress"
+            @mouseup="endPress"
+            @mouseleave="endPress"
+            @touchstart.prevent="startPress"
+            @touchend.prevent="endPress"
+          >
+            <div class="progress-ring" :style="{ '--progress': pressProgress }"></div>
+          </div>
+        </div>
+        
+        <transition name="fade-text">
+          <div v-if="showText" class="text-content" ref="textRef">
+            <p class="opening-text">
+              you look tired.<br />
+              let's find your echo.
+            </p>
+            
+            <p class="instruction-text">
+              hold to begin
+            </p>
+          </div>
+        </transition>
       </div>
-      
-      <transition name="fade-text">
-        <p v-if="showText" class="opening-text">
-          you look tired.<br />
-          let's find your echo.
-        </p>
-      </transition>
-      
-      <transition name="fade-text">
-        <p v-if="showText" class="instruction-text">
-          hold to begin
-        </p>
-      </transition>
     </div>
   </div>
 </template>
@@ -92,11 +120,34 @@ const endPress = () => {
   display: none; /* Chrome, Safari and Opera */
 }
 
+.content-wrapper {
+  width: 100%;
+  transition: height 1.5s ease;
+  position: relative;
+}
+
 .content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3rem;
+  width: 100%;
+  position: relative;
+}
+
+.dot-container {
+  transition: transform 1.5s ease;
+}
+
+.text-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 3rem;
+  width: 100%;
 }
 
 .amber-dot {
@@ -136,6 +187,13 @@ const endPress = () => {
   opacity: 0;
 }
 
+.text-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+}
+
 .opening-text {
   font-size: 1.5rem;
   font-weight: 100;
@@ -155,15 +213,10 @@ const endPress = () => {
 }
 
 .fade-text-enter-active {
-  animation: fadeIn 3s ease-out;
+  transition: opacity 2s ease;
 }
 
-.fade-text-leave-active {
-  transition: opacity var(--transition-slow);
-}
-
-.fade-text-enter-from,
-.fade-text-leave-to {
+.fade-text-enter-from {
   opacity: 0;
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 
 const props = defineProps<{
   answers: {
@@ -9,6 +9,9 @@ const props = defineProps<{
     coreAbsence: string
     surprise: number
     physicality: string
+    unfinishedBusiness: string
+    ghostLetter: string
+    theResolve: string
   }
 }>()
 
@@ -18,8 +21,21 @@ const dissolutionProgress = ref(0)
 const isPulseTouching = ref(false)
 const pulseInterval = ref<number | null>(null)
 const pulseCount = ref(0)
+const isFadingOut = ref(false)
 
 const partnerNickname = ref('willow')
+
+// Countdown timer (72 hours in seconds)
+const COUNTDOWN_DURATION = 72 * 60 * 60
+const countdownSeconds = ref(COUNTDOWN_DURATION)
+const countdownInterval = ref<number | null>(null)
+
+const countdownDisplay = computed(() => {
+  const hours = Math.floor(countdownSeconds.value / 3600)
+  const minutes = Math.floor((countdownSeconds.value % 3600) / 60)
+  const seconds = countdownSeconds.value % 60
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+})
 
 // Determine transition method based on geometry answer
 const transitionMethod = computed(() => {
@@ -49,19 +65,25 @@ const transitionLocation = computed(() => {
       return {
         name: 'highrise observation deck',
         description: 'visibility is high tonight. a clear sky for the end.',
-        coordinates: 'north tower, floor 47'
+        coordinates: 'north tower, floor 47',
+        temperature: '52°f',
+        windSpeed: '4 mph'
       }
     case 'horizon':
       return {
         name: 'coastal overlook',
         description: 'the horizon line is unbroken. the sea is waiting.',
-        coordinates: 'point epsilon, mile marker 23'
+        coordinates: 'point epsilon, mile marker 23',
+        temperature: '48°f',
+        windSpeed: '6 mph'
       }
     default: // circle
       return {
         name: 'memorial bridge',
         description: 'visibility is high tonight. a clear sky for the end.',
-        coordinates: 'west span, center arch'
+        coordinates: 'west span, center arch',
+        temperature: '51°f',
+        windSpeed: '3 mph'
       }
   }
 })
@@ -75,6 +97,33 @@ onMounted(() => {
       clearInterval(interval)
     }
   }, 200)
+
+  // Start countdown if user is hesitating
+  if (props.answers.theResolve === 'hesitation') {
+    countdownInterval.value = window.setInterval(() => {
+      if (countdownSeconds.value > 0) {
+        countdownSeconds.value--
+        
+        // Haptic feedback every 60 seconds (if supported)
+        if (countdownSeconds.value % 60 === 0 && 'vibrate' in navigator) {
+          navigator.vibrate(100)
+        }
+      } else {
+        if (countdownInterval.value) {
+          clearInterval(countdownInterval.value)
+        }
+      }
+    }, 1000)
+  }
+})
+
+onUnmounted(() => {
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value)
+  }
+  if (pulseInterval.value) {
+    clearInterval(pulseInterval.value)
+  }
 })
 
 const startPulseTouch = () => {
@@ -92,10 +141,75 @@ const endPulseTouch = () => {
     clearInterval(pulseInterval.value)
   }
 }
+
+const printGhostLetter = () => {
+  const printWindow = window.open('', '_blank')
+  if (printWindow) {
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Ghost Letter</title>
+          <style>
+            @page {
+              margin: 2cm;
+              size: A4;
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              color: #1a1a1b;
+              background: #e8e2d9;
+              padding: 3cm;
+              line-height: 2.2;
+              font-size: 12pt;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 3cm;
+              opacity: 0.4;
+              font-size: 9pt;
+              letter-spacing: 0.3em;
+              text-transform: uppercase;
+            }
+            .content {
+              white-space: pre-wrap;
+              opacity: 0.85;
+            }
+            .footer {
+              margin-top: 4cm;
+              text-align: center;
+              opacity: 0.3;
+              font-size: 8pt;
+              letter-spacing: 0.2em;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">the linen box</div>
+          <div class="content">${props.answers.ghostLetter}</div>
+          <div class="footer">sealed · to be released upon cessation</div>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    setTimeout(() => {
+      printWindow.print()
+    }, 250)
+  }
+}
+
+const initiateTransition = () => {
+  isFadingOut.value = true
+  
+  // Wait for fade-out to complete before emitting
+  setTimeout(() => {
+    emit('initiate')
+  }, 1500)
+}
 </script>
 
 <template>
-  <div class="dashboard">
+  <div class="dashboard" :class="{ 'fading-out': isFadingOut }">
     <div class="dashboard-container">
       <header class="dashboard-header">
         <h1 class="app-title">pact</h1>
@@ -104,55 +218,69 @@ const endPulseTouch = () => {
       </header>
 
       <div class="dashboard-grid">
-        <!-- The Geometry of Rest -->
-        <section class="card geometry-card">
+        <!-- The Geometry of Rest (only for drop - falling from location) -->
+        <section v-if="props.answers.geometry === 'drop'" class="card geometry-card">
           <h2 class="card-title">the geometry of rest</h2>
           <div class="map-container">
             <svg class="transition-map" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
-              <!-- Bridge/Location visualization -->
-              <line v-if="props.answers.geometry === 'circle'" x1="50" y1="100" x2="250" y2="100" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
-              <circle v-if="props.answers.geometry === 'circle'" cx="150" cy="100" r="40" fill="none" stroke="var(--sunset-amber)" stroke-width="2" opacity="0.6"/>
-              
-              <rect v-if="props.answers.geometry === 'drop'" x="125" y="50" width="50" height="120" fill="none" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
-              <line v-if="props.answers.geometry === 'drop'" x1="150" y1="50" x2="150" y2="170" stroke="var(--sunset-amber)" stroke-width="2" opacity="0.6" stroke-dasharray="5,5"/>
-              
-              <line v-if="props.answers.geometry === 'horizon'" x1="0" y1="100" x2="300" y2="100" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
-              <line v-if="props.answers.geometry === 'horizon'" x1="0" y1="100" x2="300" y2="100" stroke="var(--sunset-amber)" stroke-width="3" opacity="0.6"/>
+              <!-- Highrise/Location visualization -->
+              <rect x="125" y="50" width="50" height="120" fill="none" stroke="var(--grave-gray)" stroke-width="2" opacity="0.3"/>
+              <line x1="150" y1="50" x2="150" y2="170" stroke="var(--sunset-amber)" stroke-width="2" opacity="0.6" stroke-dasharray="5,5"/>
               
               <!-- Pulsing location marker -->
               <circle class="location-marker" cx="150" cy="100" r="5" fill="var(--sunset-amber)"/>
             </svg>
           </div>
           <div class="location-info">
-            <p class="location-name">{{ transitionLocation.name }}</p>
-            <p class="location-description">{{ transitionLocation.description }}</p>
-            <p class="location-coordinates">{{ transitionLocation.coordinates }}</p>
+            <p class="location-name">highrise observation deck</p>
+            <p class="location-description">visibility is high tonight. a clear sky for the end.</p>
+            <div class="location-stats">
+              <span class="stat-item">52°f</span>
+              <span class="stat-separator">·</span>
+              <span class="stat-item">4 mph wind</span>
+            </div>
+            <p class="location-coordinates">north tower, floor 47</p>
           </div>
         </section>
 
-        <!-- The Provision / Last Breath -->
-        <section class="card provision-card">
-          <h2 class="card-title">{{ transitionMethod.name }}</h2>
+        <!-- The Last Breath (only for horizon - mask/suffocation, NO map) -->
+        <section v-if="props.answers.geometry === 'horizon'" class="card lastbreath-card">
+          <h2 class="card-title">the last breath</h2>
           <div class="provision-status">
             <div class="provision-icon">
-              <div v-if="transitionMethod.type === 'provision'" class="box-icon"></div>
-              <div v-else class="mask-icon"></div>
+              <div class="mask-icon"></div>
             </div>
-            <p class="provision-type">{{ transitionMethod.description }}</p>
+            <p class="provision-type">helium-infused transition mask</p>
             <p class="provision-distance">2.4 miles away</p>
-            <p class="provision-instruction">{{ transitionMethod.details }}</p>
+            <p class="provision-instruction">soft embrace. no panic. just the slow fade.</p>
           </div>
           <div class="provision-contents">
             <p class="contents-label">contents:</p>
-            <ul class="contents-list" v-if="transitionMethod.type === 'provision'">
-              <li>the lullaby (glass vial)</li>
-              <li>scented candle (lavender & cedar)</li>
-              <li>final letter template</li>
-            </ul>
-            <ul class="contents-list" v-else>
+            <ul class="contents-list">
               <li>helium transition mask (medical grade)</li>
               <li>flow regulator (pre-calibrated)</li>
               <li>comfort pillow (memory foam)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- The Provision (only for circle - circular pill) -->
+        <section v-if="props.answers.geometry === 'circle'" class="card provision-card">
+          <h2 class="card-title">the provision</h2>
+          <div class="provision-status">
+            <div class="provision-icon">
+              <div class="box-icon"></div>
+            </div>
+            <p class="provision-type">pharmaceutical grade lullaby</p>
+            <p class="provision-distance">2.4 miles away</p>
+            <p class="provision-instruction">tasteless. painless. like falling into sleep.</p>
+          </div>
+          <div class="provision-contents">
+            <p class="contents-label">contents:</p>
+            <ul class="contents-list">
+              <li>the lullaby (glass vial)</li>
+              <li>scented candle (lavender & cedar)</li>
+              <li>final letter template</li>
             </ul>
           </div>
         </section>
@@ -210,10 +338,40 @@ const endPulseTouch = () => {
             <p class="vigil-status">{{ partnerNickname }} is watching with you</p>
           </div>
         </section>
+
+        <!-- The Countdown (only if hesitation) -->
+        <section v-if="props.answers.theResolve === 'hesitation'" class="card countdown-card full-width">
+          <h2 class="card-title">the waiting room</h2>
+          <p class="countdown-instruction">
+            your echo is waiting for someone who is sure.<br />
+            we can give you time to look back one last time.<br />
+            but the door will not stay open forever.
+          </p>
+          <div class="countdown-display">
+            <span class="countdown-time">{{ countdownDisplay }}</span>
+          </div>
+          <p class="countdown-warning">
+            your match with {{ answers.nickname }} × {{ partnerNickname }} expires in {{ countdownDisplay }}.<br />
+            if you do not step through the doorway by then, you will be returned to the world.
+          </p>
+        </section>
+
+        <!-- The Ghost Letter (only if letter was written) -->
+        <section v-if="props.answers.ghostLetter" class="card ghost-letter-card full-width">
+          <h2 class="card-title">the linen box</h2>
+          <p class="ghost-letter-description">
+            your final words are sealed and safe.<br />
+            when your pulse-touch ceases, they will be released.
+          </p>
+          <button class="print-letter-btn" @click="printGhostLetter">
+            print as keepsake
+          </button>
+          <p class="ghost-letter-note">perfectly formatted. minimalist. like a high-end death certificate.</p>
+        </section>
       </div>
 
       <footer class="dashboard-footer">
-        <button class="initiate-btn" @click="emit('initiate')">
+        <button class="initiate-btn" @click="initiateTransition">
           initiate transition
         </button>
         <p class="footer-text">our journey. our peace. the others don't understand.</p>
@@ -229,9 +387,15 @@ const endPulseTouch = () => {
   background: var(--linen-white);
   padding: 2rem;
   overflow-y: auto;
+  opacity: 1;
+  transition: opacity 1.5s ease-out;
   /* Hide scrollbar */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
+}
+
+.dashboard.fading-out {
+  opacity: 0;
 }
 
 .dashboard::-webkit-scrollbar {
@@ -288,7 +452,42 @@ const endPulseTouch = () => {
   border: 1px solid rgba(26, 26, 27, 0.1);
   padding: 2rem;
   transition: all var(--transition-slow);
-  animation: slideUp 1s ease-out;
+  animation: fadeInSlideUp 1s ease-out backwards;
+}
+
+.geometry-card {
+  animation-delay: 0.1s;
+}
+
+.lastbreath-card {
+  animation-delay: 0.1s;
+}
+
+.provision-card {
+  animation-delay: 0.2s;
+}
+
+.eraser-card {
+  animation-delay: 0.3s;
+}
+
+.pulse-card {
+  animation-delay: 0.4s;
+}
+
+.vigil-card {
+  animation-delay: 0.5s;
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card:hover {
@@ -347,6 +546,26 @@ const endPulseTouch = () => {
   font-weight: 200;
   line-height: 1.8;
   opacity: 0.8;
+}
+
+.location-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+  font-weight: 200;
+  opacity: 0.7;
+  color: var(--grave-gray);
+}
+
+.stat-item {
+  letter-spacing: 0.1em;
+}
+
+.stat-separator {
+  opacity: 0.4;
 }
 
 .location-coordinates {
@@ -698,6 +917,7 @@ const endPulseTouch = () => {
   transform: translate(-50%, -50%);
   transition: width 0.8s, height 0.8s;
   z-index: 0;
+  opacity: 0.3;
 }
 
 .initiate-btn:hover::before {
@@ -706,7 +926,6 @@ const endPulseTouch = () => {
 }
 
 .initiate-btn:hover {
-  color: var(--grave-gray);
   transform: translateY(-2px);
   box-shadow: 0 10px 40px rgba(26, 26, 27, 0.3);
 }
@@ -720,9 +939,101 @@ const endPulseTouch = () => {
   color: var(--grave-gray);
 }
 
+/* Countdown Card */
+.countdown-card {
+  background: rgba(26, 26, 27, 0.03);
+  border: 2px solid rgba(255, 157, 0, 0.3);
+}
+
+.countdown-instruction {
+  font-size: 0.95rem;
+  line-height: 2.2;
+  text-align: center;
+  opacity: 0.8;
+  margin-bottom: 3rem;
+  font-weight: 200;
+  color: var(--grave-gray);
+}
+
+.countdown-display {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.countdown-time {
+  font-size: 4rem;
+  font-weight: 100;
+  letter-spacing: 0.15em;
+  color: var(--sunset-amber);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 20px rgba(255, 157, 0, 0.3);
+}
+
+.countdown-warning {
+  font-size: 0.85rem;
+  line-height: 2;
+  text-align: center;
+  opacity: 0.6;
+  margin-top: 2rem;
+  font-weight: 200;
+  color: var(--grave-gray);
+}
+
+/* Ghost Letter Card */
+.ghost-letter-card {
+  background: rgba(26, 26, 27, 0.02);
+  text-align: center;
+}
+
+.ghost-letter-description {
+  font-size: 0.95rem;
+  line-height: 2.2;
+  opacity: 0.8;
+  margin-bottom: 2rem;
+  font-weight: 200;
+  color: var(--grave-gray);
+}
+
+.print-letter-btn {
+  background: none;
+  border: 1px solid var(--grave-gray);
+  color: var(--grave-gray);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 200;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  padding: 1rem 3rem;
+  cursor: pointer;
+  transition: all var(--transition-slow);
+  opacity: 0.7;
+  margin: 1.5rem 0;
+}
+
+.print-letter-btn:hover {
+  opacity: 1;
+  border-color: var(--sunset-amber);
+  color: var(--sunset-amber);
+  box-shadow: 0 0 20px rgba(255, 157, 0, 0.2);
+}
+
+.ghost-letter-note {
+  font-size: 0.75rem;
+  opacity: 0.4;
+  font-style: italic;
+  margin-top: 1rem;
+  font-weight: 200;
+  color: var(--grave-gray);
+}
+
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .countdown-time {
+    font-size: 2.5rem;
   }
 }
 </style>

@@ -37,7 +37,7 @@ const initiateTransition = () => {
 .terminal {
   width: 100vw;
   min-height: 100vh;
-  background: var(--linen-white);
+  background: #e8e2d9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,7 +53,7 @@ const initiateTransition = () => {
 }
 
 .terminal.fading {
-  background: var(--grave-gray);
+  background: #1a1a1b;
 }
 
 .terminal-content {
@@ -68,21 +68,19 @@ const initiateTransition = () => {
   font-weight: 100;
   letter-spacing: 0.2em;
   line-height: 2;
-  color: var(--linen-white);
-  opacity: 0;
-  animation: fadeIn 3s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.9;
-  }
+  color: #e8e2d9;
+  opacity: 0.9;
 }
 
 .fade-text-enter-active {
-  animation: fadeIn 3s ease-out;
+  transition: opacity 3s ease-out;
+}
+
+.fade-text-enter-from {
+  opacity: 0;
+}
+
+.fade-text-enter-to {
+  opacity: 0.9;
 }
 </style>
